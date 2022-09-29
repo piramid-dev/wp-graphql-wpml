@@ -1,6 +1,6 @@
 # WPGraphQL WPML Extension
 
-* **Contributors:** rburgst
+* **Contributors:** rburgst, eliawk
 * **Stable tag:** 1.1.0
 * **Tested up to:** 5.6.1
 * **Requires at least:** 4.9
