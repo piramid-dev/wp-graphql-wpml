@@ -20,6 +20,9 @@ use WPGraphQL\Data\Connection\AbstractConnectionResolver;
  * @license     GPL-3
  */
 
+ //loop through all taxonomies
+ 
+
 
 function wpgraphqlwpml_is_graphql_request()
 {
@@ -227,106 +230,124 @@ function wpgraphqlwpml_add_post_type_fields(\WP_Post_Type $post_type_object)
       },
     ]
   );
+  $taxonomies = get_taxonomies(['show_in_graphql' => true], 'objects');
 
 
-  register_graphql_field(
-    'Family',
-    'localizedWpmlFamilies',
-    [
-      'type' => ['list_of' => 'family'],
-      'description' => __('WPML localized families', 'wp-graphql-wpml'),
-      'resolve' => function (
-        \WPGraphQL\Model\Term $family,
-        $args,
-        $context,
-        $info
-      ) {
-        global $sitepress;
-        
+  foreach ($taxonomies as $taxonomy) {
+    //check if taxonomy has translation in wpml
+    $singular = $taxonomy->graphql_single_name;
+    $plural = $taxonomy->graphql_plural_name;
+    //singular first letter to uppercase
+    $singularUppercase = ucfirst($singular);
+    $pluralUppercase = ucfirst($plural);
 
-        $family_id = $family->fields["databaseId"];
-
-
-        $get_language_args = array('element_id' => $family_id, 'element_type' => 'family');
-        $langInfo = apply_filters('wpml_element_language_details', null, $get_language_args);
-
-
-        $languages = $sitepress->get_active_languages();
-        $terms = [];
-
-
-
-        foreach ($languages as $language) {
-          //error_log(json_encode($language['code']));
-
-          if ($language['code'] === $langInfo->language_code) {
-            
-            continue;
-          }
-
-          $translated_family_id = apply_filters('wpml_object_id', $family_id, 'family', false, $language['code']);
-     
-          if ($translated_family_id) {
-            $translated_family = new \WPGraphQL\Model\Term(
-              \WP_Term::get_instance($translated_family_id)
-            );
-            $terms[] = $translated_family;
-          }
-        }
-
-    
-
-        return $terms;
-      },
-    ]
-  );
-
-  register_graphql_field(
-    'Family',
-    'locale',
-    [
-      'type' => 'Locale',
-      'description' => __('WPML translation locale', 'wp-graphql-wpml'),
-      'resolve' => function (
-        \WPGraphQL\Model\Term $family,
-        $args,
-        $context,
-        $info
-      ) {
-
-        $family_id = $family->fields["databaseId"];
-        $fields = $info->getFieldSelection();
-        
-        $language = [
-          'id' => null,
-          'locale' => null,
-          'language_code' => null,
-        ];
-
-        $args = array('element_id' => $family_id, 'element_type' => 'family');
-        $langInfo = apply_filters('wpml_element_language_details', null, $args);
-
-        error_log(json_encode($langInfo));
-        $language_code = $langInfo->language_code;
-
-        //get terms locale
-        $locale = apply_filters('wpml_element_language_code', null, $args);
-        
-
-        if(isset($fields['locale'])){
-          $language['locale'] = $language_code;
-
-        }
+    register_graphql_field(
+      $singularUppercase,
+      'localizedWpml'.$pluralUppercase,
+      [
+        'type' => ['list_of' => 'family'],
+        'description' => __('WPML localized families', 'wp-graphql-wpml'),
+        'resolve' => function (
+          \WPGraphQL\Model\Term $term,
+          $args,
+          $context,
+          $info
+        ) {
+          global $sitepress;
+          
+  
+          $term_id = $term->fields["databaseId"];
+  
+  
+          $get_language_args = array('element_id' => $term_id, 'element_type' => 'family');
+          $langInfo = apply_filters('wpml_element_language_details', null, $get_language_args);
+  
+  
+          $languages = $sitepress->get_active_languages();
+          $terms = [];
+  
+  
+  
+          foreach ($languages as $language) {
+            //error_log(json_encode($language['code']));
+  
+            if ($language['code'] === $langInfo->language_code) {
+              
+              continue;
+            }
+  
+            $translated_family_id = apply_filters('wpml_object_id', $term_id, 'family', false, $language['code']);
        
+            if ($translated_family_id) {
+              $translated_family = new \WPGraphQL\Model\Term(
+                \WP_Term::get_instance($translated_family_id)
+              );
+              $terms[] = $translated_family;
+            }
+          }
+  
+      
+  
+          return $terms;
+        },
+      ]
+    );
 
-        if (isset($fields['language_code'])) {
-          $language['language_code'] = $language_code;
-        }
+    register_graphql_field(
+      'Family',
+      'locale',
+      [
+        'type' => 'Locale',
+        'description' => __('WPML translation locale', 'wp-graphql-wpml'),
+        'resolve' => function (
+          \WPGraphQL\Model\Term $term,
+          $args,
+          $context,
+          $info
+        ) {
+  
+          $term_id = $term->fields["databaseId"];
+          $fields = $info->getFieldSelection();
+          
+          $language = [
+            'id' => null,
+            'locale' => null,
+            'language_code' => null,
+          ];
+  
+          $args = array('element_id' => $term_id, 'element_type' => 'family');
+          $langInfo = apply_filters('wpml_element_language_details', null, $args);
+  
+          error_log(json_encode($langInfo));
+          $language_code = $langInfo->language_code;
+  
+          //get terms locale
+          $locale = apply_filters('wpml_element_language_code', null, $args);
+          
+  
+          if(isset($fields['locale'])){
+            $language['locale'] = $language_code;
+  
+          }
+         
+  
+          if (isset($fields['language_code'])) {
+            $language['language_code'] = $language_code;
+          }
+  
+          return $language;
+        },
+      ]
+    );
 
-        return $language;
-      },
-    ]
-  );
+
+  }
+
+  
+
+  
+
+  
 }
 
 /**
